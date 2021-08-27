@@ -49,7 +49,7 @@ extern struct CONFIGTABLE xxcfg;
 
 #endif
 
-extern struct TNCINFO * TNCInfo[34];		// Records are Malloc'd
+extern struct TNCINFO * TNCInfo[41];		// Records are Malloc'd
 
 extern int ReportTimer;
 
@@ -75,17 +75,18 @@ char * FormatMH(PMHSTRUC MH, char Format);
 //	Needed for Big/LittleEndian and ARM5 (unaligned operation problem) portability
 
 
-VOID PutLengthinBuffer(PDATAMESSAGE buff, int datalen)
+VOID PutLengthinBuffer(PDATAMESSAGE buff, USHORT datalen)
 {
 	if (datalen <= sizeof(void *) + 4)
 		datalen = sizeof(void *) + 4;		// Protect
 
-	memcpy(&buff->LENGTH, &datalen, 2);	
+	memcpy(&buff->LENGTH, &datalen, 2);
 }
 
 int GetLengthfromBuffer(PDATAMESSAGE buff)
 {
 	USHORT Length;
+
 	memcpy(&Length, &buff->LENGTH, 2);
 	return Length;
 }
@@ -163,9 +164,6 @@ VOID * _Q_REM_NP(VOID *PQ, char * File, int Line)
 
 	Q = PQ;
 
-	if (Semaphore.Flag == 0)
-		Debugprintf("Q_REM called without semaphore from %s Line %d", File, Line);
-
 	if (CheckQHeadder((UINT *)Q) == 0)
 		return(0);
 
@@ -229,7 +227,7 @@ BOK1:
 	{
 		if (pointer == BUFF)
 		{
-			Debugprintf("Trying to free buffer when already on FREE_Q");
+			Debugprintf("Trying to free buffer %p when already on FREE_Q", BUFF);
 //			WriteMiniDump();
 
 			return 0;
@@ -754,7 +752,7 @@ VOID SetApplPorts()
 }
 
 
-struct TNCINFO * TNCInfo[34];		// Records are Malloc'd
+struct TNCINFO * TNCInfo[41];		// Records are Malloc'd
 
 BOOL ProcessIncommingConnect(struct TNCINFO * TNC, char * Call, int Stream, BOOL SENDCTEXT)
 {
@@ -766,6 +764,9 @@ BOOL ProcessIncommingConnectEx(struct TNCINFO * TNC, char * Call, int Stream, BO
 	TRANSPORTENTRY * Session;
 	int Index = 0;
 	PMSGWITHLEN buffptr;
+	int Totallen = 0;
+	UCHAR * ptr;
+	struct PORTCONTROL * PORT = &TNC->PortRecord->PORTCONTROL;
 
 	// Stop Scanner
 
@@ -823,14 +824,39 @@ BOOL ProcessIncommingConnectEx(struct TNCINFO * TNC, char * Call, int Stream, BO
 
 	TNC->Streams[Stream].Connected = TRUE;			// Subsequent data to data channel
 
-	if (HFCTEXTLEN > 1 && SENDCTEXT)
+	if (SENDCTEXT == 0)
+		return TRUE;
+
+	// if Port CTEXT defined, use it
+	
+	if (PORT->CTEXT)
 	{
+		Totallen = strlen(PORT->CTEXT);
+		ptr = PORT->CTEXT;
+	}
+	else if (HFCTEXTLEN > 0)
+	{
+		Totallen = HFCTEXTLEN;
+		ptr = HFCTEXT;
+	}
+	else
+		return 0;
+
+	while (Totallen)
+	{
+		int sendLen = 250;
+		
+		if (Totallen < 250)
+			sendLen = Totallen;
+			
 		buffptr = (PMSGWITHLEN)GetBuff();
 		if (buffptr == 0) return TRUE;			// No buffers
 
-		buffptr->Len = HFCTEXTLEN;
-		memcpy(&buffptr->Data[0], HFCTEXT, HFCTEXTLEN);
+		buffptr->Len = sendLen;
+		memcpy(&buffptr->Data[0], ptr, sendLen);
 		C_Q_ADD(&TNC->Streams[Stream].BPQtoPACTOR_Q, buffptr);
+		Totallen -= sendLen;
+		ptr += sendLen;
 	}
 	return TRUE;
 }
@@ -3219,6 +3245,8 @@ int __sync_lock_test_and_set(int * ptr, int val)
 #endif // __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
 #endif // MACBPQ
 
+
+
 void GetSemaphore(struct SEM * Semaphore, int ID)
 {
 	//
@@ -3354,6 +3382,7 @@ VOID ResolveUpdateThread(void * Unused)
 
 		Debugprintf("Resolving %s", "chatmap.g8bpq.net");
 		HostEnt2 = gethostbyname ("chatmap.g8bpq.net");
+//		HostEnt2 = gethostbyname ("192.168.1.64");
 
 		if (HostEnt2)
 			memcpy(&Chatreportdest.sin_addr.s_addr,HostEnt2->h_addr,4);
@@ -4392,4 +4421,73 @@ LRESULT CALLBACK UIWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 }
 
 #endif
+
+extern struct DATAMESSAGE * REPLYBUFFER;
+char * __cdecl Cmdprintf(TRANSPORTENTRY * Session, char * Bufferptr, const char * format, ...);
+void GetPortCTEXT(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * CMD)
+{
+	char FN[250];
+	FILE *hFile;
+	struct stat STAT;
+	struct PORTCONTROL * PORT = PORTTABLE;
+	char PortList[256] = "";
+
+	while (PORT)
+	{
+		if (PORT->CTEXT)
+		{
+			free(PORT->CTEXT);
+			PORT->CTEXT = 0;
+		}
+
+		if (BPQDirectory[0] == 0)
+			sprintf(FN, "Port%dCTEXT.txt", PORT->PORTNUMBER);
+		else
+			sprintf(FN, "%s/Port%dCTEXT.txt", BPQDirectory, PORT->PORTNUMBER);
+
+		if (stat(FN, &STAT) == -1)
+		{
+			PORT = PORT->PORTPOINTER;
+			continue;
+		}
+
+		hFile = fopen(FN, "rb");
+
+		if (hFile)
+		{
+			char * ptr;
+			
+			PORT->CTEXT = zalloc(STAT.st_size + 1);
+			fread(PORT->CTEXT , 1, STAT.st_size, hFile); 
+			fclose(hFile);
+			
+			// convert CRLF or LF to CR
+	
+			while (ptr = strstr(PORT->CTEXT, "\r\n"))
+				memmove(ptr, ptr + 1, strlen(ptr));
+
+			// Now has LF
+
+			while (ptr = strchr(PORT->CTEXT, '\n'))
+				*ptr = '\r';
+
+
+			sprintf(PortList, "%s,%d", PortList, PORT->PORTNUMBER);
+		}
+
+		PORT = PORT->PORTPOINTER;
+	}
+
+	if (Session)
+	{	
+		Bufferptr = Cmdprintf(Session, Bufferptr, "CTEXT Read for ports %s\r", &PortList[1]);
+		SendCommandReply(Session, REPLYBUFFER, (int)(Bufferptr - (char *)REPLYBUFFER));
+	}
+	else
+		Debugprintf("CTEXT Read for ports %s\r", &PortList[1]);
+}
+
+
+
+
 

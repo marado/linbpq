@@ -379,6 +379,15 @@ typedef struct MSGWITHLEN
 
 } *PMSGWITHLEN;
 
+typedef struct MSGWITHOUTLEN
+{
+	//	Basic Chained Buffer
+
+	struct MSGWITHLEN * Next;
+	UCHAR Data[256];
+
+} *PMSGWITHOUTLEN;
+
 //
 //	BPQHOST MODE VECTOR STRUC
 //
@@ -499,7 +508,7 @@ struct WL2KInfo
 
 	BOOL UseRigCtrlFreqs;
 	char WL2KFreq[12];
-	char WL2KMode;				// WL2K reporting mode
+	char xWL2KMode;				// WL2K reporting mode
 	char WL2KModeChar;			// W or N
 	BOOL DontReportNarrowOnWideFreqs;
 
@@ -655,6 +664,10 @@ typedef struct PORTCONTROL
 	struct TNCINFO * TNC;		// Associated TNC record
 	int RIGPort;				// Linked port for freq resporting
 	unsigned int PERMITTEDAPPLS;	// Appls allowed on this port (generalisation of BBSBANNED)
+	char * CTEXT;				// Port Specific CText
+	char Hide;					// Hide from port display and AGW connect menu
+	TRANSPORTENTRY * Session;	// For Response to KISS command
+	time_t LastKISSCmdTime;
 
 }	PORTCONTROLX, *PPORTCONTROL;
 
@@ -1249,6 +1262,7 @@ struct arp_table_entry
 	int SourcePort;				// Used to select socket, hence from port.
 //	SOCKET SourceSocket;
 	struct AXIPPORTINFO * PORT;
+	BOOL noUpdate;				// Don't update dest address from incoming packet
 };
 
 

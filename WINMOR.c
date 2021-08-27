@@ -121,7 +121,7 @@ extern int SemHeldByAPI;
 
 static RECT Rect;
 
-struct TNCINFO * TNCInfo[34];		// Records are Malloc'd
+struct TNCINFO * TNCInfo[41];		// Records are Malloc'd
 
 static int ProcessLine(char * buf, int Port);
 
@@ -271,20 +271,13 @@ lineloop:
 	Msg[SaveLen] = Save;
 
 }
-
-VOID MySetWindowText(HWND hWnd, char * Msg)
+				
+VOID MySetWindowTextWithSem(HWND hWnd, char * Msg)
 {
 #ifndef LINBPQ
 
 	PMSGWITHLEN buffptr;
-	BOOL Sem = FALSE;
 
-	if (Semaphore.Flag == 0)
-	{
-		GetSemaphore(&Semaphore, 88);
-		Sem = TRUE;
-	}
-	
 	buffptr = GetBuff();
 
 	if (buffptr)
@@ -295,65 +288,89 @@ VOID MySetWindowText(HWND hWnd, char * Msg)
 		C_Q_ADD(&SetWindowTextQ, buffptr);
 	}
 
-	if (Sem)
-		FreeSemaphore(&Semaphore);
-
 #endif
 }
 
-VOID SetWindowTextSupport(PMSGWITHLEN Buffer)
-{
-	HWND hWnd = (HWND)Buffer->Len;
-	char * Msg = Buffer->Data;
+int C_Q_ADD_NP(VOID *PQ, VOID *PBUFF);
 
-	SetWindowText(hWnd, Msg);
-	ReleaseBuffer(Buffer);
+struct SEM SetWindTextSem = {0, 0, 0, 0};
+
+VOID MySetWindowText(HWND hWnd, char * Msg)
+{
+	PMSGWITHLEN buffptr;
+
+#ifndef LINBPQ
+
+	GetSemaphore(&SetWindTextSem, 61);
+	buffptr = zalloc(400);
+
+	if (buffptr)
+	{
+		buffptr->Len= (UINT)hWnd;
+		memcpy(&buffptr->Data[0], Msg, strlen(Msg) + 1);
+	
+		C_Q_ADD_NP(&SetWindowTextQ, buffptr);
+	}
+
+	FreeSemaphore(&SetWindTextSem);
+#endif
+}
+
+VOID SetWindowTextSupport()
+{
+	PMSGWITHLEN Buffer;
+
+	while (SetWindowTextQ)
+	{
+		GetSemaphore(&SetWindTextSem, 61);
+		Buffer = Q_REM_NP(&SetWindowTextQ);
+		SetWindowText((HWND)Buffer->Len, Buffer->Data);
+		FreeSemaphore(&SetWindTextSem);
+		free(Buffer);
+	}
 }
 
 
 VOID WritetoTrace(struct TNCINFO * TNC, char * Msg, int Len)
 {
-
 	//	It seems writing from multiple threads can cause problems in Windows
 	//	Queue and process in main thread
 
-
 #ifdef LINBPQ
-
 	WritetoTraceSupport(TNC, Msg, Len);
 }
-
 #else
+	UINT * buffptr;
+	BOOL Sem = FALSE;
+
+	if (Len < 0)
+		return;
+
+	// Get semaphore if it isn't set
+
+	if (InterlockedExchange(&Semaphore.Flag, 1) == 0) 
 	{
-		UINT * buffptr;
-		BOOL Sem = FALSE;
-
-		if (Len < 0)
-			return;
-
-		if (Semaphore.Flag == 0)
-		{
-			GetSemaphore(&Semaphore, 88);
-			Sem = TRUE;
-		}
-
-		buffptr = GetBuff();
-
-		if (buffptr)
-		{
-			if (Len > 340)
-				Len = 340;
-
-			buffptr[1] = (UINT)TNC;
-			buffptr[2] = (UINT)Len;
-			memcpy(&buffptr[3], Msg, Len + 1);	
-
-			C_Q_ADD(&WINMORTraceQ, buffptr);
-		}
-
-		if (Sem)
-			FreeSemaphore(&Semaphore);
+		Sem = TRUE;
+		Semaphore.Gets++;
 	}
+
+	buffptr = GetBuff();
+
+	if (buffptr)
+	{
+		if (Len > 340)
+			Len = 340;
+
+		buffptr[1] = (UINT)TNC;
+		buffptr[2] = (UINT)Len;
+		memcpy(&buffptr[3], Msg, Len + 1);	
+
+		C_Q_ADD(&WINMORTraceQ, buffptr);
+	}
+
+	if (Sem)
+		FreeSemaphore(&Semaphore);
+
 }
 #endif
 
@@ -3036,6 +3053,7 @@ BOOL RestartTNC(struct TNCINFO * TNC)
 		
 		STARTUPINFO  SInfo;			// pointer to STARTUPINFO 
 	    PROCESS_INFORMATION PInfo; 	// pointer to PROCESS_INFORMATION 
+//		char workingDirectory[256];
 
 		SInfo.cb=sizeof(SInfo);
 		SInfo.lpReserved=NULL; 
@@ -3051,6 +3069,7 @@ BOOL RestartTNC(struct TNCINFO * TNC)
 		{
 			Sleep(100);
 		}
+
 
 		if (CreateProcess(NULL, TNC->ProgramPath, NULL, NULL, FALSE,0 ,NULL ,NULL, &SInfo, &PInfo))
 		{

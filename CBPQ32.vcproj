@@ -49,7 +49,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="..\CInclude;..\CommonSource;..\CKernel"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;BPQ32_EXPORTS;MDIKERNEL;_USE_32BIT_TIME_T"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -115,7 +115,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="c:\windows\System32\Myxcopy /Y  c:\DevProgs\BPQ32\bpq32.dll c:\windows\SysWOW64\bpq32.dll &amp;&amp; &quot;C:\Program Files\7-Zip\7z.exe&quot; a  C:\DevProgs\BPQ32\bpq32.zip C:\DevProgs\BPQ32\bpq32.dll &amp;&amp; del C:\DevProgs\BPQ32\bpq32.dll "
+				CommandLine="c:\windows\SysWOW64\Myxcopy /Y  c:\DevProgs\BPQ32\bpq32.dll c:\windows\SysWOW64\bpq32.dll &amp;&amp; &quot;C:\Program Files\7-Zip\7z.exe&quot; a  C:\DevProgs\BPQ32\bpq32.zip C:\DevProgs\BPQ32\bpq32.dll &amp;&amp; del C:\DevProgs\BPQ32\bpq32.dll "
 			/>
 		</Configuration>
 		<Configuration
@@ -156,7 +156,7 @@
 				AdditionalOptions="/D &quot;MDIKERNEL&quot;"
 				Optimization="0"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="..\CInclude;..\CommonSource;..\CKernel"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;BPQ32_EXPORTS;MDIKERNEL;_USE_32BIT_TIME_T"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -178,7 +178,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions=" /section:_BPQDATA,srw"
-				AdditionalDependencies="WS2_32.Lib winmm.lib DbgHelp.lib comctl32.lib Iphlpapi.lib setupapi.lib ..\lib\libconfig.lib"
+				AdditionalDependencies="WS2_32.Lib winmm.lib DbgHelp.lib comctl32.lib setupapi.lib ..\lib\libconfig.lib"
 				OutputFile="C:\DevProgs\BPQ32\bpq32.dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile="..\CommonSource\bpq32.def"
@@ -218,7 +218,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="c:\windows\System32\Myxcopy /Y  c:\DevProgs\BPQ32\bpq32.dll c:\windows\SysWOW64\bpq32.dll &amp;&amp; &quot;C:\Program Files\7-Zip\7z.exe&quot; a  C:\DevProgs\BPQ32\bpq32.zip C:\DevProgs\BPQ32\bpq32.dll &amp;&amp; del C:\DevProgs\BPQ32\bpq32.dll "
+				CommandLine="c:\windows\SysWOW64\Myxcopy /Y  c:\DevProgs\BPQ32\bpq32.dll c:\windows\SysWOW64\bpq32.dll &amp;&amp; &quot;C:\Program Files\7-Zip\7z.exe&quot; a  C:\DevProgs\BPQ32\bpq32.zip C:\DevProgs\BPQ32\bpq32.dll &amp;&amp; del C:\DevProgs\BPQ32\bpq32.dll "
 			/>
 		</Configuration>
 	</Configurations>
@@ -248,6 +248,10 @@
 			</File>
 			<File
 				RelativePath="..\CommonSource\APRSCode.c"
+				>
+			</File>
+			<File
+				RelativePath=".\APRSStdPages.c"
 				>
 			</File>
 			<File
@@ -343,6 +347,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\HSMODEM.c"
+				>
+			</File>
+			<File
 				RelativePath="..\CommonSource\HTTPcode.c"
 				>
 			</File>
@@ -359,7 +367,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\KISSHF.c"
+				RelativePath="..\CommonSource\KISSHF.c"
 				>
 			</File>
 			<File
@@ -444,6 +452,10 @@
 			</File>
 			<File
 				RelativePath="..\CommonSource\WINMOR.c"
+				>
+			</File>
+			<File
+				RelativePath="..\CommonSource\WinRPR.c"
 				>
 			</File>
 		</Filter>

@@ -124,7 +124,7 @@ extern int SemHeldByAPI;
 
 static RECT Rect;
 
-struct TNCINFO * TNCInfo[34];		// Records are Malloc'd
+struct TNCINFO * TNCInfo[41];		// Records are Malloc'd
 
 static int ProcessLine(char * buf, int Port);
 
@@ -3898,7 +3898,7 @@ VOID ARDOPProcessDataPacket(struct TNCINFO * TNC, UCHAR * Type, UCHAR * Data, in
 							buffptr->CTL = 3;
 							buffptr->PID = 0xF0;
 							memcpy(buffptr->L2DATA, ptr3, APLen);
-							buffptr->LENGTH  = 23 + APLen;
+							buffptr->LENGTH  = 16 + MSGHDDRLEN + APLen;
 							time(&buffptr->Timestamp);
 
 							BPQTRACE((MESSAGE *)buffptr, TRUE);

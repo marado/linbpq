@@ -40,6 +40,10 @@ struct ScanEntry
 	int PollCmdLen;
 	char APPL[13];		// Autoconnect APPL for this Freq
 	char APPLCALL[10];	// Callsign for autoconnect application
+	char Cmd1Msg[100];	// Space for commands
+	char Cmd2Msg[16];
+	char Cmd3Msg[16];
+	char Cmd4Msg[16];
 };
 
 struct HAMLIBSOCK 
@@ -60,10 +64,10 @@ struct RIGINFO
 	void * BPQtoRADIO_Q;			// Frames from switch for radio
 
 	UINT BPQPort;				// Port this radio is attached to. Bit Map, as may be more than one port controlling radio
-	int PortNum;				// Number of port that defined this rig
-	
+//	int PortNum;				// Number of port that defined this rig
+	int Interlock;				// Interlock group for this Radio
 	int IC735;					// Old ICOM with shorter freq message
-
+	int ICF8101;				// ICOM Land Mobile IC-F8101
 	char * CM108Device;			// Device to open for CM108 GPIO PTT
 
 	struct _EXTPORTDATA * PortRecord[32]; // BPQ32 port record(s) for this rig (null terminated list)
@@ -115,11 +119,13 @@ struct RIGINFO
 	HWND hMODE;
 	HWND hSCAN;
 	HWND hPTT;
+	HWND hPORTS;
 
 	char * WEB_Label;
 	char * WEB_CAT;
 	char * WEB_FREQ;
 	char * WEB_MODE;
+	char * WEB_PORTS;
 	char WEB_SCAN;
 	char WEB_PTT;
 
@@ -210,9 +216,6 @@ struct RIGPORTINFO
 	// Local ScanStruct for Interactive Commands
 	struct ScanEntry * FreqPtr;		// Block we are currently sending.
 	struct ScanEntry ScanEntry;	
-	char Line2[10];
-	char Line3[10];
-	char Line4[10];
 	int CONNECTED;					// for HAMLIB
 	int CONNECTING;
 	int Alerted;
