@@ -116,6 +116,7 @@ void ProcessWebMailMessage(struct HTTPConnectionInfo * Session, char * Key, BOOL
 int SendWebMailHeader(char * Reply, char * Key, struct HTTPConnectionInfo * Session);
 struct UserInfo * FindBBS(char * Name);
 void ReleaseWebMailStruct(WebMailInfo * WebMail);
+VOID TidyWelcomeMsg(char ** pPrompt);
 
 char UNC[] = "";
 char CHKD[] = "checked=checked ";
@@ -1158,7 +1159,7 @@ int SendMessageDetails(struct MsgInfo * Msg, char * Reply, char * Key)
 		strcpy(D2, FormatDateAndTime((time_t)Msg->datereceived, FALSE));
 		strcpy(D3, FormatDateAndTime((time_t)Msg->datechanged, FALSE));
 
-		if (Msg->emailfrom[0])
+//		if (Msg->emailfrom[0])
 			sprintf(EmailFromLine, "Email From <input style=\"width:320px;\" name=EFROM value=%s><br>", Msg->emailfrom);
 
 		len = sprintf(Reply, MailDetailPage, Msg->number, Key,
@@ -1429,6 +1430,8 @@ VOID SaveHousekeeping(struct HTTPConnectionInfo * Session, char * MsgPtr, char *
 
 		GetParam(input, "MTTime=", Temp);
 		MaintTime = atoi(Temp);
+		GetParam(input, "MTInt=", Temp);
+		MaintInterval = atoi(Temp);
 		GetParam(input, "MAXMSG=", Temp);
 		MaxMsgno = atoi(Temp);
 		GetParam(input, "BIDLife=", Temp);
@@ -1447,13 +1450,13 @@ VOID SaveHousekeeping(struct HTTPConnectionInfo * Session, char * MsgPtr, char *
 		GetCheckBox(input, "OvUnsent=", &OverrideUnsent);
 
 		GetParam(input, "PR=", Temp);
-		PR = atoi(Temp);
+		PR = atof(Temp);
 		GetParam(input, "PUR=", Temp);
-		PUR = atoi(Temp);
+		PUR = atof(Temp);
 		GetParam(input, "PF=", Temp);
-		PF = atoi(Temp);
+		PF = atof(Temp);
 		GetParam(input, "PUF=", Temp);
-		PNF = atoi(Temp);
+		PNF = atof(Temp);
 		GetParam(input, "BF=", Temp);
 		BF = atoi(Temp);
 		GetParam(input, "BUF=", Temp);
@@ -1508,6 +1511,11 @@ VOID SaveWelcome(struct HTTPConnectionInfo * Session, char * MsgPtr, char * Repl
 		GetMallocedParam(input, "NUWelcome=", &WelcomeMsg);
 		GetMallocedParam(input, "NewWelcome=", &NewWelcomeMsg);
 		GetMallocedParam(input, "ExWelcome=", &ExpertWelcomeMsg);
+
+		TidyWelcomeMsg(&WelcomeMsg);
+		TidyWelcomeMsg(&NewWelcomeMsg);
+		TidyWelcomeMsg(&ExpertWelcomeMsg);
+
 		GetMallocedParam(input, "NUPrompt=", &Prompt);
 		GetMallocedParam(input, "NewPrompt=", &NewPrompt);
 		GetMallocedParam(input, "ExPrompt=", &ExpertPrompt);
@@ -2240,6 +2248,7 @@ VOID ProcessMsgUpdate(struct HTTPConnectionInfo * Session, char * MsgPtr, char *
 		}
 		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;strcpy(Msg->to, ptr1);ptr1 = ptr2;}
 		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;strcpy(Msg->bid, ptr1);ptr1 = ptr2;}
+		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;strcpy(Msg->emailfrom, ptr1);ptr1 = ptr2;}
 		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;strcpy(Msg->via, ptr1);ptr1 = ptr2;}
 		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;strcpy(Msg->title, ptr1);ptr1 = ptr2;}
 		ptr2 = strchr(ptr1, '|');if (ptr2){*(ptr2++) = 0;Msg->type = *ptr1;ptr1 = ptr2;}
@@ -2480,7 +2489,7 @@ VOID SendHouseKeeping(char * Reply, int * ReplyLen, char * Key)
 
 		*ReplyLen = sprintf(Reply, HousekeepingTemplate, 
 			 BBSName, Key, Key, Key, Key, Key, Key, Key, Key, Key,
-			MaintTime, MaxMsgno, BidLifetime, LogAge, UserLifetime,
+			MaintTime, MaintInterval, MaxMsgno, BidLifetime, LogAge, UserLifetime,
 			(DeletetoRecycleBin) ? CHKD  : UNC,
 			(SendNonDeliveryMsgs) ? CHKD  : UNC,
 			(SuppressMaintEmail) ? CHKD  : UNC,

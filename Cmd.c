@@ -108,6 +108,7 @@ char RESTARTOK[] = "Restarting\r";
 char RESTARTFAILED[] = "Restart failed\r";
 
 UCHAR ARDOP[7] = {'A'+'A','R'+'R','D'+'D','O'+'O','P'+'P',' '+' '};		// ARDOP IN AX25
+UCHAR VARA[7] = {'V'+'V','A'+'A','R'+'R','A'+'A',' '+' ',' '+' '};		// VARA IN AX25
 
 int STATSTIME = 0;
 int MAXBUFFS = 0;
@@ -131,7 +132,7 @@ VOID RESET2();
 int APPL1 = 0;
 int PASSCMD = 0;
 
-#pragma pack (1)
+#pragma pack(1)
 
 struct _EXTPORTDATA DP;			// Only way I can think of to get offets to port data into cmd table
 
@@ -169,7 +170,7 @@ char * __cdecl Cmdprintf(TRANSPORTENTRY * Session, char * Bufferptr, const char 
 {
 	// Send Command response checking PACLEN
 
-	char Mess[1000];
+	char Mess[4096];
 	va_list(arglist);
 	int OldLen;
 	int MsgLen;
@@ -693,14 +694,20 @@ VOID APPLCMD(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * 
 	{
 		//	COPY ALIAS TO COMMAND BUFFER, THEN REENTER COMMAND HANDLER
 
+		int SaveSecure = Session->Secure_Session;
+
 		memcpy(COMMANDBUFFER, ALIASPTR, ALIASLEN);
 		_strupr(COMMANDBUFFER);
 		memcpy(OrigCmdBuffer, ALIASPTR, ALIASLEN);	// In case original case version needed
 		
 		ALIASINVOKED = 1;							// To prevent Alias Loops 	
 
+		// Set secure session for application alias in case telnet outward connect
+
+		Session->Secure_Session = 1;
 		DoTheCommand(Session);
-	
+		Session->Secure_Session = SaveSecure;
+
 		return;
 	}
 
@@ -922,7 +929,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 	struct PORTCONTROL * PORT = PORTTABLE;
 	struct PORTCONTROL * STARTPORT;
 
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	//	SEE IF ANY PARAM
 
@@ -992,7 +999,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		PORT = PORT->PORTPOINTER;	
 	}
 
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Frames Digied");
@@ -1002,7 +1009,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2DIGIED);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Frames Heard ");
@@ -1012,7 +1019,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2FRAMES);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Frames Rxed  ");
@@ -1022,7 +1029,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2FRAMESFORUS);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Frames Sent  ");
@@ -1032,7 +1039,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2FRAMESSENT);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Timeouts     ");
@@ -1042,7 +1049,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2TIMEOUTS);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "REJ Frames Rxed ");
@@ -1052,7 +1059,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2REJCOUNT);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "RX out of Seq   ");
@@ -1062,7 +1069,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2OUTOFSEQ);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "L2 Resequenced  ");
@@ -1072,7 +1079,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2RESEQ);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "Undrun/Poll T/o ");
@@ -1082,7 +1089,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2URUNC);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "RX Overruns     ");
@@ -1092,7 +1099,8 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2ORUNC);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
+
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "RX CRC Errors   ");
 
@@ -1101,7 +1109,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->RXERRORS);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "FRMRs Sent      ");
@@ -1111,7 +1119,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2FRMRTX);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "FRMRs Received  ");
@@ -1121,7 +1129,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L2FRMRRX);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "Frames abandoned");
@@ -1131,7 +1139,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "%9d", PORT->L1DISCARD);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	PORT = STARTPORT;
 	Bufferptr = Cmdprintf(Session, Bufferptr, "Link Active %%   ");
@@ -1141,7 +1149,7 @@ VOID CMDSTATS(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX *
 		Bufferptr = Cmdprintf(Session, Bufferptr, "   %2d %3d", PORT->AVSENDING, PORT->AVACTIVE);
 		PORT = PORT->PORTPOINTER;	
 	}
-	*(Bufferptr++) = 13;
+	Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	SendCommandReply(Session, REPLYBUFFER, (int)(Bufferptr - (char *)REPLYBUFFER));
 }
@@ -1254,7 +1262,7 @@ CMDS60:
 
 VOID CMDP00(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * CMD)
 {
-	// Porocess PORTS Message
+	// Process PORTS Message
 
 	struct PORTCONTROL * PORT = PORTTABLE;
 
@@ -1333,7 +1341,7 @@ char *  DisplayRoute(TRANSPORTENTRY * Session, char * Bufferptr, struct ROUTE * 
 			Bufferptr = Cmdprintf(Session, Bufferptr, " %4.2fs %4.2fs", srtt, nsrtt);
 		}
 
-		*(Bufferptr++) = 13;
+		Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 	}
 	else
 	{
@@ -1980,10 +1988,14 @@ TRANSPORTENTRY * SetupNewSession(TRANSPORTENTRY * Session, char * Bufferptr)
 		NewSess++;
 	}
 
-	Bufferptr = Cmdprintf(Session, Bufferptr, "Sorry - System Tables Full\r");
-	SendCommandReply(Session, REPLYBUFFER, (int)(Bufferptr - (char *)REPLYBUFFER));
-	return NULL;
+	if (Bufferptr)
+	{
+		Bufferptr = Cmdprintf(Session, Bufferptr, "Sorry - System Tables Full\r");
+		SendCommandReply(Session, REPLYBUFFER, (int)(Bufferptr - (char *)REPLYBUFFER));
 	}
+	
+	return NULL;
+}
 
 
 VOID DoNetromConnect(TRANSPORTENTRY * Session, char * Bufferptr, struct DEST_LIST * Dest, BOOL Spy)
@@ -2064,6 +2076,7 @@ VOID CMDC00(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * C
 	char TextCall[10];
 	int TextCallLen;
 	char PortString[10];
+	char cmdCopy[256];
 
 #ifdef EXCLUDEBITS
 
@@ -2087,6 +2100,8 @@ VOID CMDC00(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * C
 	CONNECTPORT = 0;			// NO PORT SPECIFIED
 
 	ptr = strtok_s(CmdTail, " ", &Context);
+
+	strcpy(cmdCopy, Context);	// Save in case Telnet Connect
 
 	if (ptr == 0)
 	{
@@ -2195,6 +2210,8 @@ NoPort:
 						//	COPY ALIAS TO COMMAND _BUFFER, THEN REENTER COMMAND HANDLER
 
 						memcpy(COMMANDBUFFER, APPL->APPLALIASVAL, ALIASLEN);
+						COMMANDBUFFER[80] = 0;
+						_strupr(COMMANDBUFFER);
 						memcpy(OrigCmdBuffer, APPL->APPLALIASVAL, ALIASLEN);	// In case original case version needed
 
 						ALIASINVOKED = TRUE;			//	 To prevent Alias Loops 	
@@ -2202,7 +2219,7 @@ NoPort:
 					else
 					{	
 						
-						// Copy Appl Command to COImmand Buffer
+						// Copy Appl Command to Command Buffer
 
 						memcpy(COMMANDBUFFER, APPL->APPLCMD, 12);
 						COMMANDBUFFER[12] = 13;
@@ -2273,10 +2290,11 @@ Downlink:
 		struct _EXTPORTDATA * EXTPORT = (struct _EXTPORTDATA *)PORT;
 		int count;
 
-		// 	if Via PACTOR or WINMOR, convert to attach and call = Digi's are in AX25STRING (+7)
+		// 	if Via PACTOR ARDOP WINMOR or VARA, convert to attach and call = Digi's are in AX25STRING (+7)
 
 		if (memcmp(&axcalls[7], &WINMOR[0], 6) == 0 ||
 			memcmp(&axcalls[7], &ARDOP[0], 6) == 0 ||
+			memcmp(&axcalls[7], &VARA[0], 6) == 0 ||
 			memcmp(&axcalls[7], &PACTORCALL[0], 6) == 0)
 		{
 			char newcmd[80];
@@ -2398,23 +2416,33 @@ noFlip:
 				Buffer->PORT = count;
 				Buffer->PID = 0xf0;
 
-				TextCall[TextCallLen] = 0;
+				// if on Telnet Port convert use original cmd tail
 
-				len = sprintf(Callstring,"C %s", TextCall);
-
-				if (axcalls[7])
+				if (memcmp(EXTPORT->PORT_DLL_NAME, "TELNET", 6) == 0)
 				{
-					int digi = 7;
+					NewSess->Secure_Session = Session->Secure_Session;
+					len = sprintf(Callstring,"C %s", cmdCopy);
+				}
+				else
+				{
+					TextCall[TextCallLen] = 0;
 
-					// we have digis
+					len = sprintf(Callstring,"C %s", TextCall);
 
-					len += sprintf(&Callstring[len], " via");
-
-					while (axcalls[digi])
+					if (axcalls[7])
 					{
-						TextCall[ConvFromAX25(&axcalls[digi], TextCall)] = 0;
-						len += sprintf(&Callstring[len], " %s", TextCall);
-						digi += 7;
+						int digi = 7;
+
+						// we have digis
+
+						len += sprintf(&Callstring[len], " via");
+
+						while (axcalls[digi])
+						{
+							TextCall[ConvFromAX25(&axcalls[digi], TextCall)] = 0;
+							len += sprintf(&Callstring[len], " %s", TextCall);
+							digi += 7;
+						}
 					}
 				}
 				Callstring[len++] = 13;
@@ -2590,7 +2618,7 @@ BOOL DecodeCallString(char * Calls, BOOL * Stay, BOOL * Spy, UCHAR * AXCalls)
 
 	while (ptr && n--)
 	{
-		// NEXT FIELD = COULD BE CALLSIGN, VIA, OR S (FOR SAVE)
+		// NEXT FIELD = COULD BE CALLSIGN, VIA, OR S (FOR STAY)
 
 		if (strcmp(ptr, "S") == 0)
 			*Stay = TRUE;
@@ -2683,7 +2711,7 @@ char * DoOneNode(TRANSPORTENTRY * Session, char * Bufferptr, struct DEST_LIST * 
 			Dest->DEST_RTT /1000.0, Dest->DEST_COUNT, 
 			(Dest->DEST_STATE & 0x40)? 'B':' ', (Dest->DEST_STATE & 63));
 	else
-		*(Bufferptr++) = 13;
+		Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 
 	NRRoute = &Dest->NRROUTE[0];
 
@@ -2847,7 +2875,7 @@ VOID CMDN00(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX * C
 		{
 			AXCall[6] = 0;
 
-			*(Bufferptr++) = 13;
+			Bufferptr = Cmdprintf(Session, Bufferptr, "\r");
 		
 			while (AXCall[6] < 32)
 			{
@@ -3611,10 +3639,13 @@ VOID ATTACHCMD(TRANSPORTENTRY * Session, char * Bufferptr, char * CmdTail, CMDX 
 				//	GET CIRCUIT TABLE ENTRY FOR OTHER END OF LINK
 	
 				NewSess = SetupNewSession(Session, Bufferptr);
+
 				if (NewSess == NULL)
 					return;
 
 				EXTPORT->ATTACHEDSESSIONS[count] = NewSess;
+
+				NewSess->Secure_Session = Session->Secure_Session;
 
 				NewSess->KAMSESSION = count;
 				

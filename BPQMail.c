@@ -1001,7 +1001,7 @@
 //	Fix WebMail Cancel Send Message
 //	Fix processing Hold Message response from Winlink Express
 
-// 6.0.20.xx
+// 6.0.20.1 April 2020
 
 //	Improvments to YAPP
 //	Add Copy forwarding config
@@ -1025,6 +1025,35 @@
 //	Add REROUTEMSGS BBS SYSOP command
 //	Disable null passwords and check Exclude flag in Webmail Signin
 //	Add basic Webmail logging 
+
+// 6.0.21.1
+
+//	Remove nulls from displayed messages.
+//	Fix Holding messages from SMTP and POP3 Interfaces
+//	Various fixes for handling messages to/from Internet email addresses
+//	Fix saving Email From field in Manage Messages
+//	Fix sending WL2K traffic reports via TriMode.
+//	Fix removing successive CR from Webmail Message display
+//	Fix Wildcarded @ forwarding
+//	Fix message type when receiving NTS Msgs form Airmail
+//	Fix address on SERVICE messages from Winlink
+//	Add multiple TO processing to Webmail non-template messages
+//	Don't backup config file if reading it fails
+//	Include Port and Freq on Connected log record
+//	Make sure welcome mesages don't end in >
+//  Allow flagging unread T messages as Delivered
+//  Replace \ with # in forward script so commands starting with # can be sent
+//  Fix forwarding NTS on TO field
+//	Fix possible crash in text mode forwarding
+//	Allow decimals of days in P message lifetimes and allow Houskeeping interval to be configured
+//	Add DOHOUSEKEEPING sysop command
+//  Add MARS continent code
+//	Try to trap 'zombie' BBS Sessions
+//	On Linux if "Delete to Recycle Bin" is set move deleted messages and logs to directory Deleted under current directory.
+//	Fix corruption of message length when reading R2 message via Read command
+//	Fix paging on List command and add new combinations of List options
+//	Fix NNTP list and LC command when bulls are killed
+
 
 #include "BPQMail.h"
 #define MAIL
@@ -1536,7 +1565,6 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 		hMonitor = (HWND)1;					// For status Save
 	}
 
-	SaveConfig(ConfigName);
 
 	SaveUserDatabase();
 	SaveMessageDatabase();
@@ -1979,7 +2007,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (MaintClock < NOW)
 				{
 					while (MaintClock < NOW)		// in case large time step
-						MaintClock += 86400;
+						MaintClock += MaintInterval * 3600;
 
 					Debugprintf("|Enter HouseKeeping");
 					DoHouseKeeping(FALSE);
@@ -2991,12 +3019,6 @@ BOOL Initialise()
 			SaveConfig(ConfigName);
 		}
 	}
-	else
-	{
-		// Got a Config Fi;e
-
-		CopyConfigFile(ConfigName);
-	}
 
 	if (GetConfig(ConfigName) == EXIT_FAILURE)
 	{
@@ -3005,6 +3027,7 @@ BOOL Initialise()
 		return FALSE;
 	}
 
+	// Got a Config File
 	
 	if (MainRect.right < 100 || MainRect.bottom < 100)
 	{
@@ -3146,14 +3169,14 @@ BOOL Initialise()
 
 		MaintClock = _mkgmtime(tm);
 
-		if (MaintClock < now)
-			MaintClock += 86400;
+		while (MaintClock < now)
+			MaintClock += MaintInterval * 3600;
 
 		Debugprintf("Maint Clock %lld NOW %lld Time to HouseKeeping %lld", (long long)MaintClock, (long long)now, (long long)(MaintClock - now));
 
 		if (LastHouseKeepingTime)
 		{
-			if ((now - LastHouseKeepingTime) > 86400)
+			if ((now - LastHouseKeepingTime) > MaintInterval * 3600)
 			{
 				DoHouseKeeping(FALSE);
 			}

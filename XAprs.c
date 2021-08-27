@@ -2967,13 +2967,16 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-	printf("G8BPQ APRS Client for Linux Version 1.1.14.6\n");
+	printf("G8BPQ APRS Client for Linux Version 1.1.14.6 \n");
   	printf("Copyright(c) 2004-2020 John Wiseman G8BPQ\n");
 	printf("APRS is a registered trademark of Bob Bruninga.\n");
 	printf("This software is based in part on the work of the Independent JPEG Group.\n");
 	printf("Mapping from OpenStreetMap (http://openstreetmap.org)\n");
 	printf("Map Tiles Courtesy of thunderforest (www.thunderforest.com)\n\n");
 
+    if (argc > 1 && argv[1] && stricmp(argv[1], "-v") == 0)
+        return 0;
+        
 	config_init(&cfg);
 
 	if (argc > 1 && argv[1] && stricmp(argv[1], "multiple") == 0)
@@ -3473,7 +3476,7 @@ int main(int argc, char *argv[])
 
 			XLookupString(&event.xkey, text, 255, &key, 0);
 
-			printf("Key %c Hex %x Code %d %x\n", text[0], text[0], key, key);
+//			printf("Key %c Hex %x Code %d %x\n", text[0], text[0], key, key);
 
 			switch(key)
 			{
